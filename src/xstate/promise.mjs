@@ -1,6 +1,6 @@
 import { createMachine, interpret } from 'xstate';
 
-const promiseMachine = createMachine({
+export const promiseMachine = createMachine({
   id: 'promise',
   initial: 'pending',
   states: {
@@ -19,6 +19,9 @@ const promiseMachine = createMachine({
   }
 })
 
+// Run machine in Node/Vanilla JS
+
+/*
 const promiseService =
   interpret(promiseMachine)
     .onTransition((state) => {
@@ -30,3 +33,4 @@ const promiseService =
     .start()  // Start the service
     
 promiseService.send({ type: 'RESOLVE' });
+*/
