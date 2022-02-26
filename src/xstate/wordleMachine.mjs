@@ -76,30 +76,38 @@ export const wordleMachine = createMachine({
     },
   },
 }).withConfig({
+  // Actions
   actions: {
-    initContext: assign({
-      answer: '',
-      guess: '',
-      board: [],
-      message: '',
-    }),
-    getWord: assign({       // get word of the day
-      answer: 'world'
-    }),
-    /*
-    fillCell: assign({
-      guess: (context, event) => context.guess + event.letter,
-    }),
-    */
-    fillCell: assign((context, event) => {
-      console.log('* fillCell')
+
+    initContext: assign((context) => {
+      console.log('* initContext')
       return {
-        guess: context.guess + event.letter
+        answer: '',
+        guess: '',
+        board: [],
+        message: '',
       }
     }),
 
-    clearCell: assign({
-      guess: (context) => context.guess.substring(0, context.guess.length - 1)
+    getWord: assign((context) => {       // get word of the day
+      console.log('* getWord')
+      return {
+        answer: 'world',
+      }
+    }),
+
+    fillCell: assign((context, event) => {
+      console.log('* fillCell')
+      let guess = context.guess + event.letter
+      guess = guess.substring(0, COLS)  // truncate string if necessary
+      return {
+        guess: guess
+      }
+    }),
+
+    clearCell: assign((context) => {
+      console.log('* clearCell')
+      guess: context.guess.substring(0, context.guess.length - 1)
     }),
 
     completeRow: assign((context) => {
@@ -113,27 +121,35 @@ export const wordleMachine = createMachine({
     invalid: assign({
       message: 'INVALID',
     }),
+
     win: assign({
       message: 'WIN',
     }),
+
     lose: assign({
       message: 'LOSE'
     }),
+
     continue: assign({
       message: 'CONTINUE'
     }),
   },
+
+  // Guards
   guards: {
+
     isValid: (context) => {
       const ret = answers.includes(context.guess)
       console.log('isValid', ret)
       return ret
     },
+
     isWin: (context) => {
       const ret = context.answer === context.board[context.board.length - 1]
       console.log('isWin', ret)
       return ret
     },
+    
     isLose: (context) => {
       const ret = context.board.length >= ROWS
       console.log('isLose', ret)
@@ -164,7 +180,10 @@ wordleService.send({ type: 'PLAY' })
 wordleService.send({ type: 'RESET' })
 
 wordleService.send({ type: 'PLAY' })
-wordleService.send({ type: 'LETTER', letter: 'h' })
+wordleService.send({ type: 'LETTER', letter: 'hello!' })
+wordleService.send({ type: 'BACKSPACE' })
+wordleService.send({ type: 'LETTER', letter: 'x' })
+/*
 wordleService.send({ type: 'BACKSPACE' })
 
 wordleService.send({ type: 'PLAY' })
@@ -181,3 +200,4 @@ wordleService.send({ type: 'LETTER', letter: 'r' })
 wordleService.send({ type: 'LETTER', letter: 'l' })
 wordleService.send({ type: 'LETTER', letter: 'd' })
 wordleService.send({ type: 'ENTER' })
+*/
