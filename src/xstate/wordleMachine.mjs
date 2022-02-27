@@ -185,6 +185,19 @@ export const wordleMachine = createMachine({
 
     completeRow: assign((context) => {
       console.log('* completeRow')
+
+      // set board letterStates
+      const states = getLetterStates(context.guess, context.answer)
+      const i = context.currentRowIndex
+      for (let j = 0; j < states.length; j++) {
+        const c = context.guess.charAt(j)
+
+        // set board letterState
+        context.board[i][j].letterState = states[j]
+
+        // set keyboard letterState
+      }
+
       return {
         currentRowIndex: context.currentRowIndex + 1,
         guess: '',
