@@ -4,6 +4,53 @@ import { createMachine, interpret, assign } from 'xstate';
 const ROWS = 6
 const COLS = 5
 
+// Enum: LetterState
+const INITIAL = 'initial'   // initial state (white)
+const ABSENT  = 'absent'    // not in the word, in any spot (grey)
+const PRESENT = 'present'   // in the word, but in the wrong spot (yellow)
+const CORRECT = 'correct'   // in the word, and in the correct spot (green)
+
+// returns index of a given letterState string 
+function getLetterStateIndex(letterState) {
+  const states = [INITIAL, ABSENT, PRESENT, CORRECT]
+  return (letterState)
+    ? states.indexOf(letterState)
+    : -1
+}
+
+function maxLetterState(ls0, ls1) {
+  return (getLetterStateIndex(ls0) > getLetterStateIndex(ls1)) 
+    ? ls0
+    : ls1
+}
+
+// returns an array of letterStates for a given (guess, answer)
+function getLetterStates(guess, answer) {
+  // assert guess.length === answer.length
+  let row = []
+  for (let i = 0; i < guess.length; i++) {
+    const c = guess.charAt(i)
+    const d = answer.charAt(i)
+
+    let s = INITIAL
+    if (answer.indexOf(c) < 0) {
+      s = ABSENT    // not in the word, in any spot
+    }
+    else if (c === d) {
+      s = CORRECT   // in the word, and in the correct spot
+    }
+    else {
+      s = PRESENT   // in the word, but in the wrong spot
+    }
+    row.push(s)
+  }
+  return row  
+}
+
+function getString(row) {
+  return row.map((cell) => cell.letter).join('')
+}
+
 const answers = [
   'hello',
   'world',
@@ -15,8 +62,9 @@ export const wordleMachine = createMachine({
   context: {
     answer: '',
     guess: '',
-    board: [],
-    message: ''
+    message: '',
+    currentRowIndex: 0,
+    board: null,
   },
   // states
   states: {
@@ -24,10 +72,8 @@ export const wordleMachine = createMachine({
       entry: 'initContext',
       on: {
         PLAY: { 
+          actions: 'getWord',
           target: 'playing',
-          actions: [
-            'getWord',
-          ],
         },
       },
     },
@@ -81,11 +127,21 @@ export const wordleMachine = createMachine({
 
     initContext: assign((context) => {
       console.log('* initContext')
+
       return {
         answer: '',
         guess: '',
-        board: [],
         message: '',
+        currentRowIndex: 0,
+
+        // board[i][j]: { letter: 'a', letterState: INITIAL }
+        board:
+          Array.from({ length: ROWS }, () =>
+            Array.from({ length: COLS }, () => ({
+              letter: '',
+              letterState: INITIAL
+            }))
+          )
       }
     }),
 
@@ -98,23 +154,40 @@ export const wordleMachine = createMachine({
 
     fillCell: assign((context, event) => {
       console.log('* fillCell')
-      let guess = context.guess + event.letter
-      guess = guess.substring(0, COLS)  // truncate string if necessary
+      let currentRow = context.board[context.currentRowIndex]
+      for (const cell of currentRow) {
+        if (!cell.letter) {
+          cell.letter = event.letter
+          break
+        }
+      }
+
       return {
-        guess: guess
+        guess: getString(currentRow)
       }
     }),
 
     clearCell: assign((context) => {
       console.log('* clearCell')
-      guess: context.guess.substring(0, context.guess.length - 1)
+
+      let currentRow = context.board[context.currentRowIndex]
+      for (const cell of [...currentRow].reverse()) {
+        if (cell.letter) {
+          cell.letter = ''
+          break;
+        }
+      }
+
+      return {
+        guess: getString(currentRow)
+      }
     }),
 
     completeRow: assign((context) => {
       console.log('* completeRow')
       return {
-        board: [...context.board, context.guess],
-        guess: ''
+        currentRowIndex: context.currentRowIndex + 1,
+        guess: '',
       }
     }),
 
@@ -139,19 +212,20 @@ export const wordleMachine = createMachine({
   guards: {
 
     isValid: (context) => {
-      const ret = answers.includes(context.guess)
+      const ret = answers.includes(getString(context.board[context.currentRowIndex]))
       console.log('isValid', ret)
       return ret
     },
 
     isWin: (context) => {
-      const ret = context.answer === context.board[context.board.length - 1]
-      console.log('isWin', ret)
+      const guess = getString(context.board[context.currentRowIndex - 1])
+      const ret = context.answer === guess
+      console.log('isWin', ret, guess)
       return ret
     },
-    
+
     isLose: (context) => {
-      const ret = context.board.length >= ROWS
+      const ret = context.currentRowIndex >= ROWS
       console.log('isLose', ret)
       return ret
     }  
@@ -173,31 +247,53 @@ const wordleService =
       console.log(
         'context: ', state.context
       )
+      state.context.board.forEach((row, i) => {
+        row.forEach((cell, j) => {
+          console.log(`[${i}][${j}] '${cell.letter}' '${cell.letterState}'`)
+        })
+      })
     })
     .start()  // Start the service
-    
-wordleService.send({ type: 'PLAY' })
-wordleService.send({ type: 'RESET' })
-
-wordleService.send({ type: 'PLAY' })
-wordleService.send({ type: 'LETTER', letter: 'hello!' })
-wordleService.send({ type: 'BACKSPACE' })
-wordleService.send({ type: 'LETTER', letter: 'x' })
-/*
-wordleService.send({ type: 'BACKSPACE' })
-
+ 
 wordleService.send({ type: 'PLAY' })
 wordleService.send({ type: 'LETTER', letter: 'h' })
 wordleService.send({ type: 'LETTER', letter: 'e' })
 wordleService.send({ type: 'LETTER', letter: 'l' })
 wordleService.send({ type: 'LETTER', letter: 'l' })
 wordleService.send({ type: 'LETTER', letter: 'o' })
-wordleService.send({ type: 'LETTER', letter: '!' })
 wordleService.send({ type: 'ENTER' })
 wordleService.send({ type: 'LETTER', letter: 'w' })
 wordleService.send({ type: 'LETTER', letter: 'o' })
 wordleService.send({ type: 'LETTER', letter: 'r' })
 wordleService.send({ type: 'LETTER', letter: 'l' })
 wordleService.send({ type: 'LETTER', letter: 'd' })
+wordleService.send({ type: 'ENTER' })
+
+
+
+/*
+wordleService.send({ type: 'RESET' })
+
+wordleService.send({ type: 'PLAY' })
+wordleService.send({ type: 'LETTER', letter: 'hello!' })
+wordleService.send({ type: 'BACKSPACE' })
+wordleService.send({ type: 'LETTER', letter: 'x' })
+
+wordleService.send({ type: 'BACKSPACE' })
+*/
+
+/*
+wordleService.send({ type: 'PLAY' })
+wordleService.send({ type: 'LETTER', letter: 'hello' })
+wordleService.send({ type: 'ENTER' })
+wordleService.send({ type: 'LETTER', letter: 'hello' })
+wordleService.send({ type: 'ENTER' })
+wordleService.send({ type: 'LETTER', letter: 'hello' })
+wordleService.send({ type: 'ENTER' })
+wordleService.send({ type: 'LETTER', letter: 'hello' })
+wordleService.send({ type: 'ENTER' })
+wordleService.send({ type: 'LETTER', letter: 'hello' })
+wordleService.send({ type: 'ENTER' })
+wordleService.send({ type: 'LETTER', letter: 'hello' })
 wordleService.send({ type: 'ENTER' })
 */
