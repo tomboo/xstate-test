@@ -47,6 +47,7 @@ function getLetterStates(guess, answer) {
   return row  
 }
 
+// Returns a string for a given board row
 function getString(row) {
   return row.map((cell) => cell.letter).join('')
 }
@@ -231,14 +232,17 @@ export const wordleMachine = createMachine({
   guards: {
 
     isValid: (context) => {
-      const ret = answers.includes(getString(context.board[context.currentRowIndex]))
+      // pre completeRow
+      const guess = getString(context.board[context.currentRowIndex])
+      const ret = answers.includes(guess)
       console.log('isValid', ret)
       return ret
     },
 
     isWin: (context) => {
+      // post completeRow
       const guess = getString(context.board[context.currentRowIndex - 1])
-      const ret = context.answer === guess
+      const ret = guess === context.answer
       console.log('isWin', ret, guess)
       return ret
     },
