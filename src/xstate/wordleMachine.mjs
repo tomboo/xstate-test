@@ -65,6 +65,7 @@ export const wordleMachine = createMachine({
     message: '',
     currentRowIndex: 0,
     board: null,
+    letterStates: {},
   },
   // states
   states: {
@@ -133,6 +134,7 @@ export const wordleMachine = createMachine({
         guess: '',
         message: '',
         currentRowIndex: 0,
+        letterStates: {},
 
         // board[i][j]: { letter: 'a', letterState: INITIAL }
         board:
@@ -186,7 +188,7 @@ export const wordleMachine = createMachine({
     completeRow: assign((context) => {
       console.log('* completeRow')
 
-      // set board letterStates
+      // set letterStates
       const states = getLetterStates(context.guess, context.answer)
       const i = context.currentRowIndex
       for (let j = 0; j < states.length; j++) {
@@ -196,6 +198,10 @@ export const wordleMachine = createMachine({
         context.board[i][j].letterState = states[j]
 
         // set keyboard letterState
+        context.letterStates[c] = maxLetterState(
+          states[j],
+          context.letterStates[c]
+        )
       }
 
       return {
@@ -281,6 +287,7 @@ wordleService.send({ type: 'LETTER', letter: 'r' })
 wordleService.send({ type: 'LETTER', letter: 'l' })
 wordleService.send({ type: 'LETTER', letter: 'd' })
 wordleService.send({ type: 'ENTER' })
+wordleService.send({ type: 'RESET' })
 
 
 
