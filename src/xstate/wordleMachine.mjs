@@ -61,11 +61,11 @@ export const wordleMachine = createMachine({
   id: 'wordle',
   initial: "idle",
   context: {
+    message: '',
     answer: '',
     guess: '',
-    message: '',
     currentRowIndex: 0,
-    board: null,
+    board: [],
     letterStates: {},
   },
   // states
@@ -131,9 +131,9 @@ export const wordleMachine = createMachine({
       console.log('* initContext')
 
       return {
+        message: '',
         answer: '',
         guess: '',
-        message: '',
         currentRowIndex: 0,
         letterStates: {},
 
@@ -157,7 +157,9 @@ export const wordleMachine = createMachine({
 
     fillCell: assign((context, event) => {
       console.log('* fillCell')
-      let currentRow = context.board[context.currentRowIndex]
+      const boardCopy = JSON.parse(JSON.stringify(context.board))
+
+      let currentRow = boardCopy[context.currentRowIndex]
       for (const cell of currentRow) {
         if (!cell.letter) {
           cell.letter = event.letter
@@ -166,14 +168,16 @@ export const wordleMachine = createMachine({
       }
 
       return {
-        guess: getString(currentRow)
+        guess: getString(currentRow),
+        board: boardCopy
       }
     }),
 
     clearCell: assign((context) => {
       console.log('* clearCell')
+      const boardCopy = JSON.parse(JSON.stringify(context.board))
 
-      let currentRow = context.board[context.currentRowIndex]
+      let currentRow = boardCopy[context.currentRowIndex]
       for (const cell of [...currentRow].reverse()) {
         if (cell.letter) {
           cell.letter = ''
@@ -182,12 +186,15 @@ export const wordleMachine = createMachine({
       }
 
       return {
-        guess: getString(currentRow)
+        guess: getString(currentRow),
+        board: boardCopy
       }
     }),
 
     completeRow: assign((context) => {
       console.log('* completeRow')
+      const boardCopy = JSON.parse(JSON.stringify(context.board))
+      const statesCopy = JSON.parse(JSON.stringify(context.letterStates))
 
       // set letterStates
       const states = getLetterStates(context.guess, context.answer)
@@ -196,18 +203,20 @@ export const wordleMachine = createMachine({
         const c = context.guess.charAt(j)
 
         // set board letterState
-        context.board[i][j].letterState = states[j]
+        boardCopy[i][j].letterState = states[j]
 
         // set keyboard letterState
-        context.letterStates[c] = maxLetterState(
+        statesCopy[c] = maxLetterState(
           states[j],
           context.letterStates[c]
         )
       }
 
       return {
-        currentRowIndex: context.currentRowIndex + 1,
         guess: '',
+        currentRowIndex: context.currentRowIndex + 1,
+        board: boardCopy,
+        letterStates: statesCopy,
       }
     }),
 
@@ -256,7 +265,6 @@ export const wordleMachine = createMachine({
 })
 
 // Run machine in Node/Vanilla JS
-
 const wordleService =
   interpret(wordleMachine)
     .onTransition((state) => {
@@ -292,32 +300,3 @@ wordleService.send({ type: 'LETTER', letter: 'l' })
 wordleService.send({ type: 'LETTER', letter: 'd' })
 wordleService.send({ type: 'ENTER' })
 wordleService.send({ type: 'RESET' })
-
-
-
-/*
-wordleService.send({ type: 'RESET' })
-
-wordleService.send({ type: 'PLAY' })
-wordleService.send({ type: 'LETTER', letter: 'hello!' })
-wordleService.send({ type: 'BACKSPACE' })
-wordleService.send({ type: 'LETTER', letter: 'x' })
-
-wordleService.send({ type: 'BACKSPACE' })
-*/
-
-/*
-wordleService.send({ type: 'PLAY' })
-wordleService.send({ type: 'LETTER', letter: 'hello' })
-wordleService.send({ type: 'ENTER' })
-wordleService.send({ type: 'LETTER', letter: 'hello' })
-wordleService.send({ type: 'ENTER' })
-wordleService.send({ type: 'LETTER', letter: 'hello' })
-wordleService.send({ type: 'ENTER' })
-wordleService.send({ type: 'LETTER', letter: 'hello' })
-wordleService.send({ type: 'ENTER' })
-wordleService.send({ type: 'LETTER', letter: 'hello' })
-wordleService.send({ type: 'ENTER' })
-wordleService.send({ type: 'LETTER', letter: 'hello' })
-wordleService.send({ type: 'ENTER' })
-*/
