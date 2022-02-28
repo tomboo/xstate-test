@@ -148,7 +148,8 @@ export const wordleMachine = createMachine({
       }
     }),
 
-    getWord: assign((context) => {       // get word of the day
+    // get word of the day
+    getWord: assign((context) => {
       console.log('* getWord')
       return {
         answer: 'world',
@@ -208,7 +209,7 @@ export const wordleMachine = createMachine({
         // set keyboard letterState
         statesCopy[c] = maxLetterState(
           states[j],
-          context.letterStates[c]
+          statesCopy[c]
         )
       }
 
